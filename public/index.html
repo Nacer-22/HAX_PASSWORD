@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090909"><title>HAX PASSWORD | Nacer_22</title><link rel="stylesheet" href="style.css"><script src="config.js" defer></script><script src="app.js" defer></script></head>
+<body><div class="glow"></div><main class="layout">
+<header class="topbar"><a class="brand" href="#"><span class="brand-symbol">H</span><span><b>HAX<span>_</span>PASSWORD</b><small>NACER_22 · SECURITY CENTER</small></span></a><span class="secure"><i></i> SECURE SESSION</span></header>
+<section id="loginPanel" class="center-stage"><article class="card login-card"><div class="eyebrow">ADMINISTRATOR ACCESS</div><h1>تسجيل <span>الدخول</span></h1><p class="sub">هذه الخدمة مخصصة لإدارة كلمة مرور المدير.</p>
+<form id="loginForm"><label>اسم المستخدم<input id="username" autocomplete="username" required placeholder="اسم المستخدم"></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></label><button class="button primary full" type="submit">دخول آمن <span>←</span></button></form><p id="loginMessage" class="message"></p><div class="small-note">لا توجد كلمة مرور افتراضية. استخدم بيانات الدخول المضبوطة على الخادم.</div></article></section>
+
+<section id="securityPanel" class="hidden">
+<div class="page-heading"><div><div class="eyebrow">SECURITY / MASTER CONTROL</div><h1>مركز <span>الأمان</span></h1><p class="sub">تحديث كلمة المرور وإنهاء صلاحية الجلسات القديمة.</p></div><button id="logout" class="button ghost">تسجيل الخروج</button></div>
+<div class="security-grid">
+<article class="card info-card"><div class="icon">◈</div><div class="eyebrow">SESSION PROTECTION</div><h2>حماية الجلسات</h2><p>عند تغيير كلمة المرور يتم إبطال جميع رموز الجلسات القديمة تلقائياً. لا يتم تخزين كلمة المرور في المتصفح.</p><div class="status-row"><span>الحالة</span><b class="status-ok">الحماية مفعّلة</b></div><div class="status-row"><span>آخر تغيير</span><b id="lastChanged">غير متوفر</b></div></article>
+<article class="card change-card"><div class="eyebrow">UPDATE CREDENTIALS</div><h2>تغيير كلمة المرور</h2><form id="changeForm">
+<label>كلمة المرور الحالية<div class="password-wrap"><input id="currentPassword" type="password" autocomplete="current-password" required><button type="button" class="eye" data-toggle="currentPassword" aria-label="إظهار أو إخفاء كلمة المرور">◉</button></div></label>
+<label>كلمة المرور الجديدة<div class="password-wrap"><input id="newPassword" type="password" autocomplete="new-password" required minlength="14"><button type="button" class="eye" data-toggle="newPassword" aria-label="إظهار أو إخفاء كلمة المرور">◉</button></div></label>
+<div class="strength"><div id="strengthFill"></div></div><div id="strengthText" class="strength-text">استخدم 14 حرفاً على الأقل مع أحرف كبيرة وصغيرة ورقم ورمز.</div>
+<label>تأكيد كلمة المرور الجديدة<input id="confirmPassword" type="password" autocomplete="new-password" required minlength="14"></label>
+<button id="changeButton" class="button primary full" type="submit">حفظ كلمة المرور وإبطال الجلسات <span>←</span></button>
+</form><p id="changeMessage" class="message" role="status"></p></article>
+</div>
+<div class="warning"><span>!</span><div><b>تنبيه أمني</b><p>احتفظ بكلمة المرور الجديدة في مكان آمن. فقدانها يتطلب إعادة ضبط الوصول من إعدادات الاستضافة أو آلية استرداد موثوقة.</p></div></div>
+</section>
+<div class="toast" id="toast" role="status"></div><footer>HAX_NON_ROOT <span>·</span> Nacer_22 <span>·</span> PASSWORD MANAGEMENT</footer></main></body></html>
