@@ -275,6 +275,17 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 .hidden{display:none!important}
+
+  .table-wrap{width:100%;overflow-x:auto;margin:12px 0;border:1px solid var(--card-border);border-radius:12px;background:#02050c}
+  .admin-table{width:100%;border-collapse:collapse;min-width:520px;font-size:.72rem;text-align:right}
+  .admin-table th,.admin-table td{padding:10px 7px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:middle}
+  .admin-table th{color:var(--accent-glow);white-space:nowrap}
+  .admin-table td{color:#fff}
+  .admin-table button{padding:6px 8px;font-size:.68rem;border-radius:8px;margin:2px}
+  .admin-table .mini-danger{background:#7f0b18;color:#fff;border:1px solid var(--danger-red)}
+  .admin-table .mini-action{background:#161b27;color:#fff;border:1px solid var(--card-border)}
+  .admin-table input[type=checkbox]{accent-color:var(--accent-glow)}
+
 </style>
 </head>
 <body>
@@ -328,6 +339,39 @@
       <span class="slider"></span>
     </label>
   </div>
+
+
+  <div class="divider"></div>
+  <div class="section-heading">👥 إدارة الموزعين والأرصدة</div>
+  <div class="input-group"><input id="addResellerCode" class="input-field" placeholder="اسم / رمز الموزع (اتركه فارغاً للتوليد)"></div>
+  <div class="input-group"><input id="addResellerBal" class="input-field" type="number" min="0" step="0.01" value="10" placeholder="الرصيد الابتدائي"></div>
+  <button id="addResellerBtn" class="btn-submit" type="button">إضافة موزّع جديد</button>
+  <div class="input-group" style="margin-top:12px"><select id="chargeSelectReseller" class="input-field"><option value="">اختر الموزع</option></select></div>
+  <div class="input-group"><input id="chargeAmount" class="input-field" type="number" min="0.01" step="0.01" placeholder="المبلغ"></div>
+  <div style="display:flex;gap:8px"><button id="chargeAddBtn" class="btn-submit" type="button">شحن الرصيد +</button><button id="chargeDeductBtn" class="btn-submit" type="button">خصم الرصيد −</button></div>
+  <div class="table-wrap"><table class="admin-table"><thead><tr><th><input id="selectAllResellers" type="checkbox"></th><th>الموزع</th><th>الرصيد</th><th>المفاتيح</th><th>حذف</th></tr></thead><tbody id="adminResellersTableBody"><tr><td colspan="5">لا توجد بيانات</td></tr></tbody></table></div>
+  <button id="deleteSelectedResellersBtn" class="btn-submit" type="button">حذف الموزعين المحددين</button>
+
+  <div class="divider"></div>
+  <div class="section-heading">💰 سعر المفتاح</div>
+  <div class="input-group"><input id="basePriceInput" class="input-field" type="number" min="0" step="0.01" placeholder="السعر الأساسي"></div>
+  <div class="msg-box">السعر الحالي: <span id="currentPriceDisplay">0.00</span></div>
+  <button id="updatePriceBtn" class="btn-submit" type="button">حفظ السعر</button>
+
+  <div class="divider"></div>
+  <div class="section-heading">🔑 إنشاء مفاتيح من الإدارة</div>
+  <div class="input-group"><select id="adminKeyDuration" class="input-field">
+    <option value="3600000">ساعة واحدة</option><option value="10800000">3 ساعات</option><option value="21600000">6 ساعات</option><option value="43200000">12 ساعة</option><option value="86400000" selected>24 ساعة</option><option value="259200000">3 أيام</option><option value="604800000">7 أيام</option><option value="1296000000">15 يوماً</option><option value="2592000000">30 يوماً</option>
+  </select></div>
+  <div class="input-group"><select id="adminKeyDevices" class="input-field"><option value="1">جهاز واحد</option><option value="2">جهازان</option><option value="3">3 أجهزة</option><option value="5">5 أجهزة</option></select></div>
+  <div class="input-group"><input id="adminKeyQuantity" class="input-field" type="number" min="1" max="50" value="1" placeholder="الكمية"></div>
+  <button id="adminGenerateKeysBtn" class="btn-submit" type="button">إنشاء المفاتيح</button>
+  <div id="adminGeneratedKeys" class="msg-box" style="white-space:pre-wrap;word-break:break-word"></div>
+
+  <div class="divider"></div>
+  <div class="section-heading">📋 إدارة جميع مفاتيح النظام</div>
+  <div class="table-wrap"><table class="admin-table"><thead><tr><th>المفتاح</th><th>الموزع</th><th>الحالة</th><th>الأجهزة</th><th>إجراءات</th></tr></thead><tbody id="adminKeysTableBody"><tr><td colspan="5">لا توجد مفاتيح</td></tr></tbody></table></div>
+  <button id="deleteAllSystemKeysBtn" class="btn-submit" type="button">حذف جميع مفاتيح النظام</button>
 
   <div class="divider"></div>
 
