@@ -1,120 +1,159 @@
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const apiBase = String(window.HAX_PASSWORD_CONFIG?.API_BASE_URL || "").replace(/\/+$/, "");
-  let token = "";
-  let toastTimer;
+  const apiBase = String((window.HAX_PASSWORD_CONFIG || {}).API_BASE_URL || "").replace(/\/+$/, "");
+  let adminToken = "";
+  let busy = false;
 
-  async function api(path, options = {}) {
+  async function api(path, options) {
+    options = options || {};
     const headers = new Headers(options.headers || {});
     if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-    if (token) headers.set("Authorization", "Bearer " + token);
-    const response = await fetch(apiBase + path, { ...options, headers });
+    if (adminToken) headers.set("Authorization", "Bearer " + adminToken);
+    const response = await fetch(apiBase + path, Object.assign({}, options, { headers }));
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "تعذر إكمال الطلب.");
+    if (!response.ok) throw new Error(data.error || "تعذر إكمال الطلب (" + response.status + ").");
     return data;
   }
-  function showToast(message) {
-    const toast = $("toast");
-    toast.textContent = message;
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+  function showMsg(text, color, target) {
+    const node = $(target || "msg");
+    node.textContent = text;
+    if (color) node.style.color = color;
   }
-  function showSecurity(visible) {
-    $("loginPanel").classList.toggle("hidden", visible);
-    $("securityPanel").classList.toggle("hidden", !visible);
+  function loginView(visible) {
+    $("masterLoginBox").classList.toggle("hidden", !visible);
+    $("controlPanel").classList.toggle("hidden", visible);
   }
-  function passwordScore(value) {
+  async function loginMaster() {
+    if (busy) return;
+    const password = $("masterLoginPassword").value;
+    if (!password) return showMsg("أدخل كلمة مرور الإدارة.", "var(--danger-red)", "loginMsg");
+    busy = true;
+    $("masterLoginButton").disabled = true;
+    showMsg("جارٍ التحقق من بيانات الدخول...", "var(--accent-glow)", "loginMsg");
+    try {
+      const data = await api("/api/auth/admin/login", {
+        method: "POST",
+        body: JSON.stringify({ password })
+      });
+      adminToken = data.token;
+      await loadMasterControl();
+      $("masterLoginPassword").value = "";
+      showMsg("", "", "loginMsg");
+      loginView(false);
+      showMsg("تم تسجيل الدخول إلى لوحة التحكم.", "var(--success-green)");
+    } catch (error) {
+      showMsg("❌ " + error.message, "var(--danger-red)", "loginMsg");
+    } finally {
+      busy = false;
+      $("masterLoginButton").disabled = false;
+    }
+  }
+  async function loadMasterControl() {
+    const values = await Promise.all([
+      api("/api/admin/overview"),
+      api("/api/admin/settings")
+    ]);
+    $("totalResellersStat").textContent = values[0].resellers || 0;
+    $("totalKeysStat").textContent = values[0].keys || 0;
+    $("maintClientToggle").checked = !!values[1].maintenance.client;
+    $("maintResellerToggle").checked = !!values[1].maintenance.reseller;
+  }
+  async function toggleMaintenanceState(type) {
+    const input = $(type === "client" ? "maintClientToggle" : "maintResellerToggle");
+    const requested = input.checked;
+    try {
+      const body = {};
+      body[type] = requested;
+      await api("/api/admin/settings/maintenance", {
+        method: "PATCH",
+        body: JSON.stringify(body)
+      });
+      showMsg(requested ? "تم تفعيل وضع الصيانة." : "تم إيقاف وضع الصيانة.", requested ? "var(--danger-red)" : "var(--success-green)");
+    } catch (error) {
+      input.checked = !requested;
+      showMsg("❌ " + error.message, "var(--danger-red)");
+    }
+  }
+  function checkStrength(value) {
+    const meter = $("strengthMeter");
+    const fill = $("strengthFill");
+    if (!value) {
+      meter.style.display = "none";
+      fill.style.width = "0%";
+      return;
+    }
+    meter.style.display = "block";
     let score = 0;
     if (value.length >= 14) score++;
     if (/[a-z]/.test(value)) score++;
     if (/[A-Z]/.test(value)) score++;
     if (/[0-9]/.test(value)) score++;
     if (/[^A-Za-z0-9]/.test(value)) score++;
-    return score;
+    fill.style.width = (score * 20) + "%";
+    fill.style.backgroundColor = score <= 2 ? "var(--danger-red)" : score <= 4 ? "var(--warning-yellow)" : "var(--success-green)";
   }
-  function updateStrength() {
-    const value = $("newPassword").value;
-    const score = passwordScore(value);
-    const width = value ? (score / 5) * 100 : 0;
-    $("strengthFill").style.width = width + "%";
-    $("strengthFill").style.background = score <= 2 ? "#ef233c" : score <= 4 ? "#e0a12d" : "#43d99a";
-    const messages = ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية", "قوية جداً"];
-    $("strengthText").textContent = value ? messages[score] : "استخدم 14 حرفاً على الأقل مع أحرف كبيرة وصغيرة ورقم ورمز.";
+  function toggleVisibility(id, button) {
+    const input = $(id);
+    const reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    button.style.color = reveal ? "var(--accent-glow)" : "";
   }
-  async function loadStatus() {
-    const data = await api("/api/security/status");
-    $("lastChanged").textContent = data.lastChangedAt ? new Date(data.lastChangedAt).toLocaleString("ar") : "لم يتم التغيير بعد";
+  function setLoading(loading) {
+    $("submitBtn").disabled = loading;
+    $("spin").style.display = loading ? "inline-block" : "none";
+    $("btnText").textContent = loading ? "جارٍ التنفيذ..." : "تحديث كلمة السر وطرد الجلسات ➔";
   }
-  $("loginForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    const button = event.submitter;
-    button.disabled = true;
-    $("loginMessage").textContent = "جارٍ التحقق...";
+  async function changeAdminPassword() {
+    if (busy) return;
+    const currentPassword = $("oldPass").value;
+    const newPassword = $("newPass").value;
+    if (!currentPassword || !newPassword) return showMsg("يرجى ملء جميع الخانات المطلوبة.", "var(--danger-red)");
+    if (newPassword.length < 14 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) ||
+        !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      return showMsg("كلمة المرور تحتاج 14 حرفاً على الأقل وحروفاً كبيرة وصغيرة ورقماً ورمزاً.", "var(--warning-yellow)");
+    }
+    busy = true;
+    setLoading(true);
+    showMsg("جارٍ التحقق وتحديث كلمة المرور...", "var(--accent-glow)");
     try {
-      const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({
-        username: $("username").value.trim(), password: $("loginPassword").value
-      }) });
-      token = data.token;
-      await loadStatus();
-      $("loginMessage").textContent = "";
-      $("loginForm").reset();
-      showSecurity(true);
-    } catch (error) {
-      $("loginMessage").textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  });
-  $("newPassword").addEventListener("input", updateStrength);
-  document.querySelectorAll("[data-toggle]").forEach(button => button.addEventListener("click", () => {
-    const input = $(button.dataset.toggle);
-    input.type = input.type === "password" ? "text" : "password";
-    button.textContent = input.type === "password" ? "◉" : "◎";
-  }));
-  $("changeForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    const currentPassword = $("currentPassword").value;
-    const newPassword = $("newPassword").value;
-    const confirmPassword = $("confirmPassword").value;
-    if (newPassword !== confirmPassword) {
-      $("changeMessage").textContent = "تأكيد كلمة المرور غير مطابق.";
-      return;
-    }
-    if (passwordScore(newPassword) !== 5) {
-      $("changeMessage").textContent = "اختر كلمة مرور أقوى وفق الشروط الموضحة.";
-      return;
-    }
-    const button = $("changeButton");
-    button.disabled = true;
-    $("changeMessage").textContent = "جارٍ تحديث كلمة المرور...";
-    try {
-      const data = await api("/api/password/change", {
+      const data = await api("/api/admin/settings/password", {
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword })
       });
-      token = data.token;
-      $("changeForm").reset();
-      updateStrength();
-      $("lastChanged").textContent = new Date(data.lastChangedAt).toLocaleString("ar");
-      $("changeMessage").textContent = data.message;
-      showToast(data.message);
+      adminToken = "";
+      $("oldPass").value = "";
+      $("newPass").value = "";
+      $("strengthMeter").style.display = "none";
+      loginView(true);
+      showMsg("✔ " + data.message + " سجّل الدخول بكلمة المرور الجديدة.", "var(--success-green)", "loginMsg");
+      showMsg(data.message + " يجب تسجيل الدخول مجدداً.", "var(--success-green)");
     } catch (error) {
-      $("changeMessage").textContent = error.message;
+      showMsg("❌ " + error.message, "var(--danger-red)");
     } finally {
-      button.disabled = false;
+      busy = false;
+      setLoading(false);
     }
+  }
+  function logoutMaster() {
+    adminToken = "";
+    $("masterLoginPassword").value = "";
+    $("oldPass").value = "";
+    $("newPass").value = "";
+    $("strengthMeter").style.display = "none";
+    $("loginMsg").textContent = "";
+    loginView(true);
+    showMsg("تم تسجيل الخروج.");
+  }
+  $("masterLoginPassword").addEventListener("keydown", event => {
+    if (event.key === "Enter") loginMaster();
   });
-  $("logout").addEventListener("click", () => {
-    token = "";
-    $("loginForm").reset();
-    $("changeForm").reset();
-    $("loginMessage").textContent = "";
-    $("changeMessage").textContent = "";
-    updateStrength();
-    showSecurity(false);
-  });
-  updateStrength();
-  showSecurity(false);
+  $("newPass").addEventListener("input", event => checkStrength(event.target.value));
+  window.loginMaster = loginMaster;
+  window.loadMasterControl = loadMasterControl;
+  window.toggleMaintenanceState = toggleMaintenanceState;
+  window.checkStrength = checkStrength;
+  window.toggleVisibility = toggleVisibility;
+  window.changeAdminPassword = changeAdminPassword;
+  window.logoutMaster = logoutMaster;
 })();
