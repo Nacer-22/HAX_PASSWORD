@@ -13,6 +13,7 @@ const path = require("path");
 
 const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || "";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data", "admin.json");
@@ -31,17 +32,36 @@ app.use(helmet({
     }
   }
 }));
-if (allowedOrigins.length) {
-  app.use(cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Origin is not allowed by CORS."));
-    },
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  }));
+if (!allowedOrigins.length) {
+  console.error("ALLOWED_ORIGINS must contain the exact trusted front-end origin.");
+  process.exit(1);
 }
-app.use(express.json({ limit: "12kb" }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  maxAge: 600,
+  optionsSuccessStatus: 204
+}));
+app.use(express.json({ limit: "12kb", strict: true }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  skip: req => req.path === "/health",
+  message: { error: "طلبات كثيرة من هذا الاتصال. حاول بعد قليل." }
+});
+app.use("/api", apiLimiter);
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -49,6 +69,14 @@ const loginLimiter = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "محاولات دخول كثيرة. حاول لاحقاً." }
+});
+
+const passwordChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "محاولات تغيير كثيرة. حاول لاحقاً." }
 });
 
 let writeQueue = Promise.resolve();
@@ -79,7 +107,7 @@ function issueToken(admin) {
   return jwt.sign(
     { sub: "admin", sessionVersion: admin.sessionVersion },
     JWT_SECRET,
-    { expiresIn: "30m", issuer: "hax-password" }
+    { algorithm: "HS256", expiresIn: "30m", issuer: "hax-password" }
   );
 }
 async function requireAdmin(req, res, next) {
@@ -87,7 +115,7 @@ async function requireAdmin(req, res, next) {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
     if (!token) return res.status(401).json({ error: "سجّل الدخول أولاً." });
-    const payload = jwt.verify(token, JWT_SECRET, { issuer: "hax-password" });
+    const payload = jwt.verify(token, JWT_SECRET, { issuer: "hax-password", algorithms: ["HS256"] });
     if (payload.sub !== "admin") return res.status(401).json({ error: "جلسة غير صالحة." });
     const admin = await readAdmin();
     if (payload.sessionVersion !== admin.sessionVersion) return res.status(401).json({ error: "تم إبطال هذه الجلسة. سجّل الدخول مجدداً." });
@@ -124,7 +152,7 @@ app.get("/api/security/status", requireAdmin, async (req, res) => {
   });
 });
 
-app.post("/api/password/change", requireAdmin, async (req, res) => {
+app.post("/api/password/change", passwordChangeLimiter, requireAdmin, async (req, res) => {
   const currentPassword = String(req.body?.currentPassword || "");
   const newPassword = String(req.body?.newPassword || "");
   if (!passwordIsStrong(newPassword)) {
@@ -152,9 +180,11 @@ app.post("/api/password/change", requireAdmin, async (req, res) => {
 
 app.use(express.static(PUBLIC_DIR, { extensions: ["html"] }));
 app.use((error, _req, res, _next) => {
-  console.error(error.message);
   if (res.headersSent) return;
+  if (error.type === "entity.parse.failed") return res.status(400).json({ error: "صيغة البيانات غير صالحة." });
+  if (error.type === "entity.too.large") return res.status(413).json({ error: "حجم الطلب أكبر من المسموح." });
   const status = error.message === "Origin is not allowed by CORS." ? 403 : 500;
+  if (status === 500) console.error("Unhandled request error:", error.message);
   res.status(status).json({ error: status === 403 ? "هذا النطاق غير مسموح." : "حدث خطأ داخلي." });
 });
 
