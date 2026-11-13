@@ -70,7 +70,8 @@
     $("adminKeysTableBody").innerHTML = keys.length ? keys.map(k => {
       const expired = k.expired || !k.expiresAt || Date.parse(k.expiresAt)<=Date.now();
       const active = k.isActive !== false && !expired;
-      return '<tr><td style="word-break:break-all">'+escapeHtml(k.code)+'</td><td>'+escapeHtml(k.resellerLabel||"الإدارة")+'</td><td>'+(active?'نشط':(expired?'منتهي':'موقوف'))+'</td><td>'+Number(k.usedDevices||0)+' / '+Number(k.devices||1)+'</td><td><button class="mini-action" data-admin-act="togglekey" data-id="'+k.id+'" data-active="'+(!active)+'">'+(active?'إيقاف':'تفعيل')+'</button><button class="mini-action" data-admin-act="resetkey" data-id="'+k.id+'">تصفير الأجهزة</button><button class="mini-danger" data-admin-act="delkey" data-id="'+k.id+'">حذف</button></td></tr>';
+      const models = Array.isArray(k.activations) && k.activations.length ? k.activations.map(a => escapeHtml(a.model || "الموديل غير متاح")).join("، ") : "لم يتم تفعيل المفتاح بعد";
+      return '<tr><td style="word-break:break-all">'+escapeHtml(k.code)+'<br><small style="color:#ff7180">الأجهزة: '+models+'</small></td><td>'+escapeHtml(k.resellerLabel||"الإدارة")+'</td><td>'+(active?'نشط':(expired?'منتهي':'موقوف'))+'</td><td>'+Number(k.usedDevices||0)+' / '+Number(k.devices||1)+'</td><td><button class="mini-action" data-admin-act="togglekey" data-id="'+k.id+'" data-active="'+(!active)+'">'+(active?'إيقاف':'تفعيل')+'</button><button class="mini-action" data-admin-act="resetkey" data-id="'+k.id+'">تصفير الأجهزة</button><button class="mini-danger" data-admin-act="delkey" data-id="'+k.id+'">حذف</button></td></tr>';
     }).join("") : '<tr><td colspan="5">لا توجد مفاتيح.</td></tr>';
   }
   function escapeHtml(value) {
