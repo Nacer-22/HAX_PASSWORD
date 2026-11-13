@@ -145,10 +145,18 @@
     loginView(true);
     showMsg("تم تسجيل الخروج.");
   }
+  // Bind controls with addEventListener: Helmet CSP blocks inline event handlers.
+  $("masterLoginButton").addEventListener("click", loginMaster);
   $("masterLoginPassword").addEventListener("keydown", event => {
     if (event.key === "Enter") loginMaster();
   });
   $("newPass").addEventListener("input", event => checkStrength(event.target.value));
+  $("logoutMasterButton").addEventListener("click", logoutMaster);
+  $("maintClientToggle").addEventListener("change", () => toggleMaintenanceState("client"));
+  $("maintResellerToggle").addEventListener("change", () => toggleMaintenanceState("reseller"));
+  $("oldPassEye").addEventListener("click", event => toggleVisibility("oldPass", event.currentTarget));
+  $("newPassEye").addEventListener("click", event => toggleVisibility("newPass", event.currentTarget));
+  $("submitBtn").addEventListener("click", changeAdminPassword);
   window.loginMaster = loginMaster;
   window.loadMasterControl = loadMasterControl;
   window.toggleMaintenanceState = toggleMaintenanceState;
