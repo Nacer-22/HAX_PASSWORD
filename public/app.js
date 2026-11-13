@@ -43,7 +43,7 @@
       loginView(false);
       showMsg("تم تسجيل الدخول إلى لوحة التحكم.", "var(--success-green)");
     } catch (error) {
-      showMsg("❌ " + error.message, "var(--danger-red)", "loginMsg");
+      showMsg("خطأ: " + error.message, "var(--danger-red)", "loginMsg");
     } finally {
       busy = false;
       $("masterLoginButton").disabled = false;
@@ -87,7 +87,7 @@
       await loadAdminData();
       showMsg("تم إنشاء الموزع. رمز الدخول: "+data.accessCode, "var(--success-green)");
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(data.accessCode).catch(()=>{});
-    } catch(e) { showMsg("❌ "+e.message,"var(--danger-red)"); }
+    } catch(e) { showMsg("خطأ: "+e.message,"var(--danger-red)"); }
   }
   async function chargeBalance(action) {
     const id=$("chargeSelectReseller").value, amount=Number($("chargeAmount").value);
@@ -95,13 +95,13 @@
     try {
       await api("/api/admin/resellers/"+encodeURIComponent(id)+"/balance",{method:"PATCH",body:JSON.stringify({amount,action})});
       $("chargeAmount").value=""; await loadAdminData(); showMsg("تم تحديث رصيد الموزع.","var(--success-green)");
-    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    } catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function updatePrice() {
     const price=Number($("basePriceInput").value);
     if(!Number.isFinite(price)||price<0) return showMsg("السعر غير صالح.","var(--danger-red)");
     try { const d=await api("/api/admin/settings",{method:"PATCH",body:JSON.stringify({price})}); $("currentPriceDisplay").textContent=Number(d.basePrice).toFixed(2); showMsg("تم حفظ السعر.","var(--success-green)"); }
-    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function generateAdminKeys() {
     const durationMs=Number($("adminKeyDuration").value), devices=Number($("adminKeyDevices").value), quantity=Number($("adminKeyQuantity").value);
@@ -112,7 +112,7 @@
       $("adminGeneratedKeys").textContent=generatedCodes.join("\n");
       $("copyGeneratedKeysBtn").style.display=generatedCodes.length ? "block" : "none";
       await loadAdminData(); showMsg("تم إنشاء المفاتيح بنجاح.","var(--success-green)");
-    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    } catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function adminAction(action,id,el) {
     try {
@@ -121,19 +121,19 @@
       if(action==="resetkey") { if(!confirm("تصفير الأجهزة المرتبطة بهذا المفتاح؟")) return; await api("/api/admin/keys/"+encodeURIComponent(id)+"/reset",{method:"POST"}); }
       if(action==="togglekey") await api("/api/admin/keys/"+encodeURIComponent(id),{method:"PATCH",body:JSON.stringify({isActive:el.dataset.active==="true"})});
       await loadAdminData(); showMsg("تم تنفيذ العملية.","var(--success-green)");
-    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    } catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function deleteSelectedResellers() {
     const ids=Array.from(document.querySelectorAll(".reseller-cb:checked")).map(x=>x.value);
     if(!ids.length) return showMsg("حدد موزعاً واحداً على الأقل.","var(--danger-red)");
     if(!confirm("حذف "+ids.length+" موزع؟")) return;
     try { for(const id of ids) await api("/api/admin/resellers/"+encodeURIComponent(id),{method:"DELETE"}); await loadAdminData(); showMsg("تم حذف الموزعين المحددين.","var(--success-green)"); }
-    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function deleteAllKeys() {
     if(!confirm("تحذير: حذف جميع مفاتيح النظام؟")) return;
     try { const d=await api("/api/admin/keys",{method:"DELETE"}); await loadAdminData(); showMsg("تم حذف "+d.deleted+" مفتاح.","var(--success-green)"); }
-    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+    catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
 
   async function loadMasterControl() {
@@ -152,7 +152,7 @@
       showMsg(requested ? "تم تفعيل وضع الصيانة." : "تم إيقاف وضع الصيانة.", requested ? "var(--danger-red)" : "var(--success-green)");
     } catch (error) {
       input.checked = !requested;
-      showMsg("❌ " + error.message, "var(--danger-red)");
+      showMsg("خطأ: " + error.message, "var(--danger-red)");
     }
   }
   function checkStrength(value) {
@@ -206,10 +206,10 @@
       $("newPass").value = "";
       $("strengthMeter").style.display = "none";
       loginView(true);
-      showMsg("✔ " + data.message + " سجّل الدخول بكلمة المرور الجديدة.", "var(--success-green)", "loginMsg");
+      showMsg("تم: " + data.message + " سجّل الدخول بكلمة المرور الجديدة.", "var(--success-green)", "loginMsg");
       showMsg(data.message + " يجب تسجيل الدخول مجدداً.", "var(--success-green)");
     } catch (error) {
-      showMsg("❌ " + error.message, "var(--danger-red)");
+      showMsg("خطأ: " + error.message, "var(--danger-red)");
     } finally {
       busy = false;
       setLoading(false);
