@@ -24,7 +24,13 @@ if (JWT_SECRET.length < 48) {
   process.exit(1);
 }
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      connectSrc: ["'self'", "https://haxreseller-production.up.railway.app"]
+    }
+  }
+}));
 if (allowedOrigins.length) {
   app.use(cors({
     origin(origin, callback) {
