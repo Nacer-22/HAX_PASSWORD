@@ -108,7 +108,9 @@
     if(!Number.isInteger(quantity)||quantity<1||quantity>50) return showMsg("الكمية يجب أن تكون بين 1 و50.","var(--danger-red)");
     try {
       const d=await api("/api/admin/keys",{method:"POST",body:JSON.stringify({durationMs,devices,quantity})});
-      $("adminGeneratedKeys").textContent=(d.keys||[]).map(k=>k.code).join("\n");
+      const generatedCodes=(d.keys||[]).map(k=>k.code).filter(Boolean);
+      $("adminGeneratedKeys").textContent=generatedCodes.join("\n");
+      $("copyGeneratedKeysBtn").style.display=generatedCodes.length ? "block" : "none";
       await loadAdminData(); showMsg("تم إنشاء المفاتيح بنجاح.","var(--success-green)");
     } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
   }
@@ -240,6 +242,28 @@
   $("chargeDeductBtn").addEventListener("click", () => chargeBalance("deduct"));
   $("updatePriceBtn").addEventListener("click", updatePrice);
   $("adminGenerateKeysBtn").addEventListener("click", generateAdminKeys);
+  $("copyGeneratedKeysBtn").addEventListener("click", async () => {
+    const text = $("adminGeneratedKeys").textContent.trim();
+    if (!text) return showMsg("لا توجد مفاتيح لنسخها.", "var(--danger-red)");
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const copied = document.execCommand("copy");
+        area.remove();
+        if (!copied) throw new Error("copy failed");
+      }
+      showMsg("تم نسخ جميع المفاتيح.", "var(--success-green)");
+    } catch (error) {
+      showMsg("تعذر النسخ تلقائياً. اضغط مطولاً على المفاتيح لنسخها.", "var(--danger-red)");
+    }
+  });
   $("deleteSelectedResellersBtn").addEventListener("click", deleteSelectedResellers);
   $("deleteAllSystemKeysBtn").addEventListener("click", deleteAllKeys);
   $("selectAllResellers").addEventListener("change", e => document.querySelectorAll(".reseller-cb").forEach(cb => cb.checked=e.target.checked));
