@@ -49,15 +49,92 @@
       $("masterLoginButton").disabled = false;
     }
   }
-  async function loadMasterControl() {
-    const values = await Promise.all([
-      api("/api/admin/overview"),
-      api("/api/admin/settings")
+
+  async function loadAdminData() {
+    const [overview, settings, resellerData, keyData] = await Promise.all([
+      api("/api/admin/overview"), api("/api/admin/settings"),
+      api("/api/admin/resellers"), api("/api/admin/keys")
     ]);
-    $("totalResellersStat").textContent = values[0].resellers || 0;
-    $("totalKeysStat").textContent = values[0].keys || 0;
-    $("maintClientToggle").checked = !!values[1].maintenance.client;
-    $("maintResellerToggle").checked = !!values[1].maintenance.reseller;
+    $("totalResellersStat").textContent = overview.resellers || 0;
+    $("totalKeysStat").textContent = overview.keys || 0;
+    $("maintClientToggle").checked = !!settings.maintenance.client;
+    $("maintResellerToggle").checked = !!settings.maintenance.reseller;
+    $("basePriceInput").value = Number(settings.basePrice || 0).toFixed(2);
+    $("currentPriceDisplay").textContent = Number(settings.basePrice || 0).toFixed(2);
+    const resellers = resellerData.resellers || [];
+    $("adminResellersTableBody").innerHTML = resellers.length ? resellers.map(r =>
+      '<tr><td><input class="reseller-cb" type="checkbox" value="'+r.id+'"></td><td>'+escapeHtml(r.label)+'<br><small>'+escapeHtml(r.displayCode)+'</small></td><td>'+Number(r.balance||0).toFixed(2)+'</td><td>'+Number(r.keysCount||0)+'</td><td><button class="mini-danger" data-admin-act="delres" data-id="'+r.id+'">حذف</button></td></tr>'
+    ).join("") : '<tr><td colspan="5">لا يوجد موزعون.</td></tr>';
+    $("chargeSelectReseller").innerHTML = '<option value="">اختر الموزع</option>'+resellers.map(r=>'<option value="'+r.id+'">'+escapeHtml(r.label)+' — '+Number(r.balance||0).toFixed(2)+'</option>').join("");
+    const keys = keyData.keys || [];
+    $("adminKeysTableBody").innerHTML = keys.length ? keys.map(k => {
+      const expired = k.expired || !k.expiresAt || Date.parse(k.expiresAt)<=Date.now();
+      const active = k.isActive !== false && !expired;
+      return '<tr><td style="word-break:break-all">'+escapeHtml(k.code)+'</td><td>'+escapeHtml(k.resellerLabel||"الإدارة")+'</td><td>'+(active?'نشط':(expired?'منتهي':'موقوف'))+'</td><td>'+Number(k.usedDevices||0)+' / '+Number(k.devices||1)+'</td><td><button class="mini-action" data-admin-act="togglekey" data-id="'+k.id+'" data-active="'+(!active)+'">'+(active?'إيقاف':'تفعيل')+'</button><button class="mini-action" data-admin-act="resetkey" data-id="'+k.id+'">تصفير الأجهزة</button><button class="mini-danger" data-admin-act="delkey" data-id="'+k.id+'">حذف</button></td></tr>';
+    }).join("") : '<tr><td colspan="5">لا توجد مفاتيح.</td></tr>';
+  }
+  function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  }
+  async function addReseller() {
+    const label = $("addResellerCode").value.trim();
+    const balance = Number($("addResellerBal").value);
+    if (!Number.isFinite(balance) || balance < 0) return showMsg("أدخل رصيداً صالحاً.", "var(--danger-red)");
+    try {
+      const data = await api("/api/admin/resellers", {method:"POST",body:JSON.stringify({label:label || "موزع جديد",balance})});
+      $("addResellerCode").value = "";
+      await loadAdminData();
+      showMsg("تم إنشاء الموزع. رمز الدخول: "+data.accessCode, "var(--success-green)");
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(data.accessCode).catch(()=>{});
+    } catch(e) { showMsg("❌ "+e.message,"var(--danger-red)"); }
+  }
+  async function chargeBalance(action) {
+    const id=$("chargeSelectReseller").value, amount=Number($("chargeAmount").value);
+    if(!id || !Number.isFinite(amount) || amount<=0) return showMsg("اختر موزعاً وأدخل مبلغاً صالحاً.","var(--danger-red)");
+    try {
+      await api("/api/admin/resellers/"+encodeURIComponent(id)+"/balance",{method:"PATCH",body:JSON.stringify({amount,action})});
+      $("chargeAmount").value=""; await loadAdminData(); showMsg("تم تحديث رصيد الموزع.","var(--success-green)");
+    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+  async function updatePrice() {
+    const price=Number($("basePriceInput").value);
+    if(!Number.isFinite(price)||price<0) return showMsg("السعر غير صالح.","var(--danger-red)");
+    try { const d=await api("/api/admin/settings",{method:"PATCH",body:JSON.stringify({price})}); $("currentPriceDisplay").textContent=Number(d.basePrice).toFixed(2); showMsg("تم حفظ السعر.","var(--success-green)"); }
+    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+  async function generateAdminKeys() {
+    const durationMs=Number($("adminKeyDuration").value), devices=Number($("adminKeyDevices").value), quantity=Number($("adminKeyQuantity").value);
+    if(!Number.isInteger(quantity)||quantity<1||quantity>50) return showMsg("الكمية يجب أن تكون بين 1 و50.","var(--danger-red)");
+    try {
+      const d=await api("/api/admin/keys",{method:"POST",body:JSON.stringify({durationMs,devices,quantity})});
+      $("adminGeneratedKeys").textContent=(d.keys||[]).map(k=>k.code).join("\n");
+      await loadAdminData(); showMsg("تم إنشاء المفاتيح بنجاح.","var(--success-green)");
+    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+  async function adminAction(action,id,el) {
+    try {
+      if(action==="delres") { if(!confirm("حذف الموزع وكل مفاتيحه؟")) return; await api("/api/admin/resellers/"+encodeURIComponent(id),{method:"DELETE"}); }
+      if(action==="delkey") { if(!confirm("حذف هذا المفتاح؟")) return; await api("/api/admin/keys/"+encodeURIComponent(id),{method:"DELETE"}); }
+      if(action==="resetkey") { if(!confirm("تصفير الأجهزة المرتبطة بهذا المفتاح؟")) return; await api("/api/admin/keys/"+encodeURIComponent(id)+"/reset",{method:"POST"}); }
+      if(action==="togglekey") await api("/api/admin/keys/"+encodeURIComponent(id),{method:"PATCH",body:JSON.stringify({isActive:el.dataset.active==="true"})});
+      await loadAdminData(); showMsg("تم تنفيذ العملية.","var(--success-green)");
+    } catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+  async function deleteSelectedResellers() {
+    const ids=Array.from(document.querySelectorAll(".reseller-cb:checked")).map(x=>x.value);
+    if(!ids.length) return showMsg("حدد موزعاً واحداً على الأقل.","var(--danger-red)");
+    if(!confirm("حذف "+ids.length+" موزع؟")) return;
+    try { for(const id of ids) await api("/api/admin/resellers/"+encodeURIComponent(id),{method:"DELETE"}); await loadAdminData(); showMsg("تم حذف الموزعين المحددين.","var(--success-green)"); }
+    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+  async function deleteAllKeys() {
+    if(!confirm("تحذير: حذف جميع مفاتيح النظام؟")) return;
+    try { const d=await api("/api/admin/keys",{method:"DELETE"}); await loadAdminData(); showMsg("تم حذف "+d.deleted+" مفتاح.","var(--success-green)"); }
+    catch(e){showMsg("❌ "+e.message,"var(--danger-red)");}
+  }
+
+  async function loadMasterControl() {
+    await loadAdminData();
   }
   async function toggleMaintenanceState(type) {
     const input = $(type === "client" ? "maintClientToggle" : "maintResellerToggle");
@@ -157,6 +234,18 @@
   $("oldPassEye").addEventListener("click", event => toggleVisibility("oldPass", event.currentTarget));
   $("newPassEye").addEventListener("click", event => toggleVisibility("newPass", event.currentTarget));
   $("submitBtn").addEventListener("click", changeAdminPassword);
+  $("addResellerBtn").addEventListener("click", addReseller);
+  $("chargeAddBtn").addEventListener("click", () => chargeBalance("add"));
+  $("chargeDeductBtn").addEventListener("click", () => chargeBalance("deduct"));
+  $("updatePriceBtn").addEventListener("click", updatePrice);
+  $("adminGenerateKeysBtn").addEventListener("click", generateAdminKeys);
+  $("deleteSelectedResellersBtn").addEventListener("click", deleteSelectedResellers);
+  $("deleteAllSystemKeysBtn").addEventListener("click", deleteAllKeys);
+  $("selectAllResellers").addEventListener("change", e => document.querySelectorAll(".reseller-cb").forEach(cb => cb.checked=e.target.checked));
+  document.addEventListener("click", event => {
+    const el=event.target.closest("[data-admin-act]");
+    if(el) adminAction(el.dataset.adminAct,el.dataset.id,el);
+  });
   window.loginMaster = loginMaster;
   window.loadMasterControl = loadMasterControl;
   window.toggleMaintenanceState = toggleMaintenanceState;
