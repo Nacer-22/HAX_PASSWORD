@@ -1,23 +1,371 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090909"><title>HAX PASSWORD | Nacer_22</title><link rel="stylesheet" href="style.css"><script src="config.js" defer></script><script src="app.js" defer></script></head>
-<body><div class="glow"></div><main class="layout">
-<header class="topbar"><a class="brand" href="#"><span class="brand-symbol">H</span><span><b>HAX<span>_</span>PASSWORD</b><small>NACER_22 · SECURITY CENTER</small></span></a><span class="secure"><i></i> SECURE SESSION</span></header>
-<section id="loginPanel" class="center-stage"><article class="card login-card"><div class="eyebrow">ADMINISTRATOR ACCESS</div><h1>تسجيل <span>الدخول</span></h1><p class="sub">هذه الخدمة مخصصة لإدارة كلمة مرور المدير.</p>
-<form id="loginForm"><label>اسم المستخدم<input id="username" autocomplete="username" required placeholder="اسم المستخدم"></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></label><button class="button primary full" type="submit">دخول آمن <span>←</span></button></form><p id="loginMessage" class="message"></p><div class="small-note">لا توجد كلمة مرور افتراضية. استخدم بيانات الدخول المضبوطة على الخادم.</div></article></section>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HAX_NON_ROOT — Master Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #03060f;
+    --card-bg: #080e1a;
+    --card-border: rgba(229, 9, 20, 0.25);
+    --accent-blue: #e50914;
+    --accent-glow: #ff4757;
+    --text-white: #ffffff;
+    --text-muted: #ff9aa3;
+    --danger-red: #ff1744;
+    --success-green: #00e676;
+    --warning-yellow: #ffd600;
+  }
 
-<section id="securityPanel" class="hidden">
-<div class="page-heading"><div><div class="eyebrow">SECURITY / MASTER CONTROL</div><h1>مركز <span>الأمان</span></h1><p class="sub">تحديث كلمة المرور وإنهاء صلاحية الجلسات القديمة.</p></div><button id="logout" class="button ghost">تسجيل الخروج</button></div>
-<div class="security-grid">
-<article class="card info-card"><div class="icon">◈</div><div class="eyebrow">SESSION PROTECTION</div><h2>حماية الجلسات</h2><p>عند تغيير كلمة المرور يتم إبطال جميع رموز الجلسات القديمة تلقائياً. لا يتم تخزين كلمة المرور في المتصفح.</p><div class="status-row"><span>الحالة</span><b class="status-ok">الحماية مفعّلة</b></div><div class="status-row"><span>آخر تغيير</span><b id="lastChanged">غير متوفر</b></div></article>
-<article class="card change-card"><div class="eyebrow">UPDATE CREDENTIALS</div><h2>تغيير كلمة المرور</h2><form id="changeForm">
-<label>كلمة المرور الحالية<div class="password-wrap"><input id="currentPassword" type="password" autocomplete="current-password" required><button type="button" class="eye" data-toggle="currentPassword" aria-label="إظهار أو إخفاء كلمة المرور">◉</button></div></label>
-<label>كلمة المرور الجديدة<div class="password-wrap"><input id="newPassword" type="password" autocomplete="new-password" required minlength="14"><button type="button" class="eye" data-toggle="newPassword" aria-label="إظهار أو إخفاء كلمة المرور">◉</button></div></label>
-<div class="strength"><div id="strengthFill"></div></div><div id="strengthText" class="strength-text">استخدم 14 حرفاً على الأقل مع أحرف كبيرة وصغيرة ورقم ورمز.</div>
-<label>تأكيد كلمة المرور الجديدة<input id="confirmPassword" type="password" autocomplete="new-password" required minlength="14"></label>
-<button id="changeButton" class="button primary full" type="submit">حفظ كلمة المرور وإبطال الجلسات <span>←</span></button>
-</form><p id="changeMessage" class="message" role="status"></p></article>
+  * { box-sizing: border-box; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: radial-gradient(ellipse at 50% -10%, #16070a 0%, #03060f 38%, #010206 75%);
+    color: var(--text-white);
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .card-container {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 28px 20px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(229, 9, 20, 0.15), inset 0 1px rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-container::before {
+    content: "";
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 180px; height: 180px;
+    background: rgba(229, 9, 20, 0.08);
+    border-radius: 50%;
+    filter: blur(20px);
+    pointer-events: none;
+  }
+
+  .brand-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--text-white);
+    font-style: italic;
+    margin-bottom: 2px;
+    text-shadow: 0 0 15px rgba(229, 9, 20, 0.4);
+  }
+  .brand-title span { 
+    color: var(--accent-glow); 
+    font-style: normal; 
+    display: block; 
+    font-size: 0.7rem; 
+    letter-spacing: 3px; 
+    margin-top: 2px;
+    font-weight: 800;
+  }
+
+  .sub-title {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+
+  /* قسم الإحصائيات (كم موزع وإحصائيات عامة) */
+  .stats-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: rgba(2, 5, 12, 0.8);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--accent-glow);
+    text-shadow: 0 0 10px rgba(229, 9, 20,0.4);
+  }
+  .stat-lbl {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+
+  /* خانات وضع الصيانة المنفصلة */
+  .maintenance-box {
+    background: rgba(2, 5, 12, 0.8);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .maintenance-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  /* سويتش الصيانة */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #222;
+    transition: .4s;
+    border-radius: 24px;
+    border: 1px solid var(--card-border);
+  }
+  .slider:before {
+    position: absolute; content: "";
+    height: 18px; width: 18px;
+    left: 3px; bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  input:checked + .slider { background-color: var(--danger-red); box-shadow: 0 0 10px var(--danger-red); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  .divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 18px 0;
+  }
+
+  .section-heading {
+    font-size: 0.78rem;
+    color: var(--accent-glow);
+    font-weight: 800;
+    margin-bottom: 12px;
+    text-align: right;
+    letter-spacing: 0.5px;
+  }
+
+  .input-group {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .input-field {
+    width: 100%;
+    background: #090304;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px 44px 14px 16px;
+    color: #fff;
+    font-family: 'Cairo', 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    text-align: right;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+  
+  .input-field:focus { 
+    border-color: var(--accent-glow); 
+    box-shadow: 0 0 15px rgba(229, 9, 20, 0.3); 
+  }
+
+  .eye-btn {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    transition: color 0.2s;
+  }
+  .eye-btn:hover { color: var(--accent-glow); }
+
+  /* شريط قوة كلمة السر */
+  .strength-meter {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin: -6px 0 14px 0;
+    overflow: hidden;
+    display: none;
+  }
+  .strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+
+  .btn-submit {
+    width: 100%;
+    background: linear-gradient(100deg, var(--accent-glow), var(--accent-blue));
+    border: none;
+    border-radius: 14px;
+    color: #03060f;
+    padding: 15px;
+    font-weight: 900;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(229, 9, 20, 0.3);
+    margin-top: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-submit:active { transform: scale(0.98); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .msg-box {
+    margin-top: 15px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-height: 22px;
+    line-height: 1.4;
+  }
+
+  /* حركة الاهتزاز عند الخطأ */
+  .shake { animation: shakeAnim 0.4s ease-in-out; }
+  @keyframes shakeAnim {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 3px solid rgba(3, 6, 15, 0.3);
+    border-top-color: #03060f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="card-container" id="mainCard">
+  <div class="brand-title">
+    HAX_NON_ROOT
+    <span>MASTER CONTROL</span>
+  </div>
+  <div class="sub-title">لوحة التحكم وإدارة النظام المركزية</div>
+
+  <!-- قسم الإحصائيات (عدد الموزعين والمفاتيح) -->
+  <div id="masterLoginBox" style="margin:22px 0 16px;padding:18px;background:rgba(2,5,12,.8);border:1px solid var(--card-border);border-radius:16px;">
+  <div class="section-heading">🔐 تسجيل دخول الإدارة</div>
+  <input type="password" id="masterLoginPassword" class="input-field" placeholder="كلمة مرور الإدارة" autocomplete="current-password">
+  <button id="masterLoginButton" class="btn-submit" type="button" style="margin-top:12px;" onclick="loginMaster()">دخول إلى لوحة التحكم</button>
+  <div id="loginMsg" class="msg-box" role="status"></div>
 </div>
-<div class="warning"><span>!</span><div><b>تنبيه أمني</b><p>احتفظ بكلمة المرور الجديدة في مكان آمن. فقدانها يتطلب إعادة ضبط الوصول من إعدادات الاستضافة أو آلية استرداد موثوقة.</p></div></div>
-</section>
-<div class="toast" id="toast" role="status"></div><footer>HAX_NON_ROOT <span>·</span> Nacer_22 <span>·</span> PASSWORD MANAGEMENT</footer></main></body></html>
+<div id="controlPanel" class="hidden">
+  <div style="display:flex;justify-content:flex-end;margin:0 0 12px;">
+    <button type="button" class="btn-submit" style="width:auto;padding:8px 14px;" onclick="logoutMaster()">تسجيل الخروج</button>
+  </div>
+<div class="stats-box">
+    <div class="stat-card">
+      <div class="stat-num" id="totalResellersStat">0</div>
+      <div class="stat-lbl">عدد الموزعين 👤</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="totalKeysStat">0</div>
+      <div class="stat-lbl">إجمالي المفاتيح 🔑</div>
+    </div>
+  </div>
+
+  <!-- أزرار تحكم وضع الصيانة المستقلة (مطابقة تماماً لمواقعك العادية ومواقع الموزعين) -->
+  <div class="maintenance-box">
+    <div class="maintenance-title">
+      <span>🛠️ صيانة موقع العملاء (Client)</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="maintClientToggle" onchange="toggleMaintenanceState('client')">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="maintenance-box">
+    <div class="maintenance-title">
+      <span>🛡️ صيانة موقع الموزعين (Reseller)</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="maintResellerToggle" onchange="toggleMaintenanceState('reseller')">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-heading">🔐 تغيير كلمة سر الأدمن وطرد الجلسات</div>
+
+  <!-- الخانة الأولى: كلمة السر الحالية -->
+  <div class="input-group">
+    <input type="password" id="oldPass" class="input-field" placeholder="🔑 كلمة السر الحالية" autocomplete="off">
+    <button class="eye-btn" onclick="toggleVisibility('oldPass', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+    </button>
+  </div>
+
+  <!-- الخانة الثانية: كلمة السر الجديدة -->
+  <div class="input-group">
+    <input type="password" id="newPass" class="input-field" placeholder="✨ كلمة السر الجديدة" oninput="checkStrength(this.value)" autocomplete="off">
+    <button class="eye-btn" onclick="toggleVisibility('newPass', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+    </button>
+  </div>
+
+  <!-- مؤشر قوة كلمة السر -->
+  <div id="strengthMeter" class="strength-meter">
+    <div id="strengthFill" class="strength-fill"></div>
+  </div>
+  
+  <button id="submitBtn" class="btn-submit" onclick="changeAdminPassword()">
+    <span id="spin" class="spinner"></span>
+    <span id="btnText">تحديث كلمة السر وطرد الجلسات ➔</span>
+  </button>
+
+  </div>
+<div id="msg" class="msg-box"></div>
+</div>
+
+
+
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
