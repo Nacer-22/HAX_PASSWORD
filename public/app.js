@@ -104,7 +104,8 @@
     catch(e){showMsg("خطأ: "+e.message,"var(--danger-red)");}
   }
   async function generateAdminKeys() {
-    const durationMs=Number($("adminKeyDuration").value), devices=Number($("adminKeyDevices").value), quantity=Number($("adminKeyQuantity").value);
+    const durationAmount=Number($("adminKeyDurationAmount").value), durationUnit=Number($("adminKeyDurationUnit").value), durationMs=durationAmount*durationUnit, devices=Number($("adminKeyDevices").value), quantity=Number($("adminKeyQuantity").value);
+    if(!Number.isSafeInteger(durationMs)||durationMs<1000||durationMs>31536000000) return showMsg("المدة من ثانية واحدة إلى 365 يوماً.","var(--danger-red)");
     if(!Number.isInteger(quantity)||quantity<1||quantity>50) return showMsg("الكمية يجب أن تكون بين 1 و50.","var(--danger-red)");
     try {
       const d=await api("/api/admin/keys",{method:"POST",body:JSON.stringify({durationMs,devices,quantity})});
