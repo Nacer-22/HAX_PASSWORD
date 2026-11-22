@@ -68,10 +68,14 @@
     $("chargeSelectReseller").innerHTML = '<option value="">اختر الموزع</option>'+resellers.map(r=>'<option value="'+r.id+'">'+escapeHtml(r.label)+' — '+Number(r.balance||0).toFixed(2)+'</option>').join("");
     const keys = keyData.keys || [];
     $("adminKeysTableBody").innerHTML = keys.length ? keys.map(k => {
-      const expired = Boolean(k.expiresAt) && (k.expired || Date.parse(k.expiresAt)<=Date.now());
-      const active = k.isActive !== false && !expired;
+      const expiresAtTime = k.expiresAt ? Date.parse(k.expiresAt) : NaN;
+      const started = k.started === true || Number.isFinite(expiresAtTime);
+      const expired = k.status === "EXPIRED" || (started && expiresAtTime <= Date.now());
+      const stopped = k.isActive === false || k.status === "STOPPED";
+      const active = !stopped && !expired;
+      const statusText = stopped ? "موقوف" : (expired ? "منتهي" : (started ? "نشط" : "لم يبدأ"));
       const models = Array.isArray(k.activations) && k.activations.length ? k.activations.map(a => escapeHtml(a.model || "الموديل غير متاح")).join("، ") : "لم يتم تفعيل المفتاح بعد";
-      return '<tr><td style="word-break:break-all">'+escapeHtml(k.code)+'<br><small style="color:#ff7180">الأجهزة: '+models+'</small></td><td>'+escapeHtml(k.resellerLabel||"الإدارة")+'</td><td>'+(active?'نشط':(expired?'منتهي':'موقوف'))+'</td><td>'+Number(k.usedDevices||0)+' / '+Number(k.devices||1)+'</td><td><button class="mini-action" data-admin-act="togglekey" data-id="'+k.id+'" data-active="'+(!active)+'">'+(active?'إيقاف':'تفعيل')+'</button><button class="mini-action" data-admin-act="resetkey" data-id="'+k.id+'">تصفير الأجهزة</button><button class="mini-danger" data-admin-act="delkey" data-id="'+k.id+'">حذف</button></td></tr>';
+      return '<tr><td style="word-break:break-all">'+escapeHtml(k.code)+'<br><small style="color:#ff7180">الأجهزة: '+models+'</small></td><td>'+escapeHtml(k.resellerLabel||"الإدارة")+'</td><td>'+statusText+'</td><td>'+Number(k.usedDevices||0)+' / '+Number(k.devices||1)+'</td><td><button class="mini-action" data-admin-act="togglekey" data-id="'+k.id+'" data-active="'+(!active)+'">'+(active?'إيقاف':'تفعيل')+'</button><button class="mini-action" data-admin-act="resetkey" data-id="'+k.id+'">تصفير الأجهزة</button><button class="mini-danger" data-admin-act="delkey" data-id="'+k.id+'">حذف</button></td></tr>';
     }).join("") : '<tr><td colspan="5">لا توجد مفاتيح.</td></tr>';
   }
   function escapeHtml(value) {
