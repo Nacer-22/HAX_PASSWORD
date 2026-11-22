@@ -178,6 +178,14 @@ app.post("/api/password/change", passwordChangeLimiter, requireAdmin, async (req
   }
 });
 
+app.use((req, res, next) => {
+  if (/\\.(?:html|js|css)$/i.test(req.path)) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+  next();
+});
 app.use(express.static(PUBLIC_DIR, { extensions: ["html"] }));
 app.use((error, _req, res, _next) => {
   if (res.headersSent) return;
